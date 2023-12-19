@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>SIPALING IOT</title>
+    <!-- Include necessary Bootstrap CSS -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <
+  </head>
+  <body>
+    <div class="overflow-x-auto">
+      <table
+        id="messagesTable"
+        class="table table-xs table-pin-rows table-pin-cols"
+      >
+        <thead>
+          <tr>
+            <td>Time</td>
+            <td>Lamp Status</td>
+            <td>Fan Status</td>
+          </tr>
+        </thead>
+        <tbody>
+            {% for i in data %}
+          <tr>
+            <td>{{ i['created_at'] }}</td>
+            <td>{{ i['lamp_is_on'] }}</td>
+            <td>{{ i['fan_is_on'] }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th></th>
+            <td>Time</td>
+            <td>Lamp Status</td>
+            <td>Fan Status</td>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Include necessary SocketIO and JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.js"></script>
+    <script>
+      var socket = io();
+
+      socket.on("mqtt_message", function (msg) {
+        console.log(msg)
+
+        // Get the table body
+        const messagesTableBody = document.querySelector(
+          "#messagesTable tbody"
+        );
+        floor = window.location.search
+
+        if (floor == ""){
+            floor = 1
+        }
+        else if (floor.split("=").length > 1){
+            floor = parseInt(loor.split("=").length[1])
+        }
+
+        msg = msg.payload[floor]
+        const newRow = messagesTableBody.insertRow(0);
+        const cell1 = newRow.insertCell(0);
+        const cell2 = newRow.insertCell(1);
+        const cell3 = newRow.insertCell(2);
+        cell1.textContent = msg.created_at;
+        cell2.textContent = msg.lamp_is_on;
+        cell3.textContent = msg.fan_is_on;
+
+        // // Check if there are more than 10 rows and remove the most bottom row
+        if (messagesTableBody.rows.length > 10) {
+          messagesTableBody.deleteRow(-1);
+        }
+      });
+
+      function publishMessage() {
+        var topic = document.getElementById("publishTopic").value;
+        var message = document.getElementById("publishMessage").value;
+        socket.emit(
+          "publish",
+          JSON.stringify({ topic: topic, message: message })
+        );
+      }
+
+      function subscribeTopic() {
+        var topic = document.getElementById("subscribeTopic").value;
+        socket.emit("subscribe", JSON.stringify({ topic: topic }));
+      }
+
+      function unsubscribeAll() {
+        socket.emit("unsubscribe_all");
+        document.getElementById("messagesList").innerHTML = ""; // Clear the messages list
+      }
+    </script>
+  </body>
+</html>
