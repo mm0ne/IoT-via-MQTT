@@ -1,3 +1,4 @@
+from typing import Optional, Sequence
 import eventlet
 import json
 from flask import Flask, render_template, request
@@ -29,10 +30,9 @@ def index():
     mqtt.unsubscribe_all()
     mqtt.subscribe("mobilan")
 
-    floor = 1
-    if request.args.get("floor"):
-        floor = int(request.args.get("floor"))
-
+    floor: str = request.args.get("floor", "")
+    if not floor.isnumeric():
+        floor = 1
     response = db.table("mobilan").select("*").filter("floor", "eq", str(floor)).limit(10).execute()
     return render_template("./index.html", data=response.data)
 
@@ -56,14 +56,8 @@ def handle_unsubscribe_all():
 
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
-    list_message = message.payload.decode().split("|")
-    list_message = [i.split(",") for i in list_message]
-    list_message = [
-        {"floor": j + 1, "lamp_is_on": i[0] == "1", "fan_is_on": i[1] == "1"} for j, i in enumerate(list_message)
-    ]
 
-    response = db.table("mobilan").insert(list_message).execute()
-    data = dict(topic=message.topic, payload=response.data)
+    data = db_insert(message=message)
     socketio.emit("mqtt_message", data=data)
 
 
@@ -74,3 +68,21 @@ def handle_logging(client, userdata, level, buf):
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000, use_reloader=True, debug=True)
+
+
+def parse_mqtt_data(message: Optional[bytes]) -> Sequence[dict]:
+    payload = message.payload.decode().split("|")
+    data = [i.split(",") for i in payload]
+    topic = message.topic.decode()
+
+    if topic == "mobilan":
+        data = [{"floor": j + 1, "lamp_is_on": i[0] == "1", "fan_is_on": i[1] == "1"} for j, i in enumerate(data)]
+
+    return data
+
+
+def db_insert(message: Optional[bytes]) -> dict:
+    data = parse_mqtt_data(message=message)
+    response = db.table("mobilan").insert(data).execute()
+    return dict(topic=message.topic, payload=response.data)
+
