@@ -66,14 +66,10 @@ def handle_logging(client, userdata, level, buf):
     print(level, buf)
 
 
-if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000, use_reloader=True, debug=True)
-
-
 def parse_mqtt_data(message: Optional[bytes]) -> Sequence[dict]:
     payload = message.payload.decode().split("|")
-    data = [i.split(",") for i in payload]
-    topic = message.topic.decode()
+    data = [i.split(",") for i in payload if i != '']
+    topic = message.topic
 
     if topic == "mobilan":
         data = [{"floor": j + 1, "lamp_is_on": i[0] == "1", "fan_is_on": i[1] == "1"} for j, i in enumerate(data)]
@@ -86,3 +82,6 @@ def db_insert(message: Optional[bytes]) -> dict:
     response = db.table("mobilan").insert(data).execute()
     return dict(topic=message.topic, payload=response.data)
 
+
+if __name__ == "__main__":
+    socketio.run(app, host="0.0.0.0", port=5000, use_reloader=True, debug=True)

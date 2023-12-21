@@ -58,13 +58,13 @@
           <div class="flex py-2 px-5 items-start justify-center gap-x-20 gap-y-8 flex-wrap w-full">
 
             <div class="flex flex-col gap-y-4 items-center justify-center w-[100px] h-[100px] md:w-[200px]  lg:w-[250px] lg:h-[130px] xl:w-[300px] xl:h-[150px] text-semibold">
-              <h4 class="text-white-300 text-xl lg:text-2xl xl:text-3xl">FAN</h4>
-              <h5 class="text-white-100 font-bold text-2xl lg:text-3xl xl:text-5xl"> Waiting...</h5>
+              <h4 class="text-white-300 text-xl lg:text-2xl xl:text-3xl">LAMP</h4>
+              <h5 id="recent-lamp-state" class="text-white-100 font-bold text-2xl lg:text-3xl xl:text-5xl"> Waiting...</h5>
             </div>
 
             <div class="flex flex-col gap-y-4 items-center justify-center w-[100px] h-[100px] md:w-[200px] h-[100px] lg:w-[250px] lg:h-[130px] xl:w-[300px] xl:h-[150px] text-semibold">
               <h4 class="text-white-300 text-xl lg:text-2xl xl:text-3xl">FAN</h4>
-              <h5 class="text-white-100 font-bold text-2xl lg:text-3xl xl:text-5xl"> Waiting...</h5>
+              <h5 id="recent-fan-state" class="text-white-100 font-bold text-2xl lg:text-3xl xl:text-5xl"> Waiting...</h5>
             </div>
 
 
@@ -150,7 +150,7 @@
           if (floor == "") {
             floor = 1;
           } else if (floor.split("=").length > 1) {
-            floor = parseInt(loor.split("=").length[1]);
+            floor = parseInt(floor.split("=").length[1]);
           }
 
           msg = msg.payload[floor];
