@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block meta %}
+<title> Pintu Surga | Dashboard </title>
+{% endblock meta %}
+
+{% block content %}
+<section class=" w-full min-h-[70vh] flex flex-col items-center justify-start px-4 py-2 lg:px-8 lg:py-4">
+  <form id='floor-filter' class="w-1/2 flex items-center justify-between self-start">
+    <select id='floor-filter' name="floor" class="select select-ghost w-full max-w-xs text-xl lg:text-2xl">
+      <option id="current-floor" disabled selected>Lantai 1</option>
+      <option value="1">Lantai 1</option>
+      <option value="2">Lantai 2</option>
+      <option value="3">Lantai 3</option>
+      <option value="4">Lantai 4</option>
+      <option value="5">Lantai 5</option>
+    </select>
+
+  </form>
+  <section class="w-full flex flex-col items-start justify-start mt-10">
+    <h4 class="font-semibold text-lg text-amber-500">Most Recent Status</h4>
+    <div class="flex py-2 px-5 items-start justify-center gap-x-20 gap-y-8 flex-wrap w-full">
+
+      <div
+        class="flex flex-col gap-y-4 items-center justify-center w-[100px] h-[100px] md:w-[200px]  lg:w-[250px] lg:h-[130px] xl:w-[300px] xl:h-[150px] text-semibold">
+        <h4 class="text-white-300 text-2xl xl:text-3xl">TEMPERATURE</h4>
+        <h5 id="recent-temperature" class="text-white-100 font-bold text-3xl xl:text-5xl"> Waiting...
+        </h5>
+      </div>
+
+      <div
+        class="flex flex-col gap-y-4 items-center justify-center w-[100px] h-[100px] md:w-[200px] h-[100px] lg:w-[250px] lg:h-[130px] xl:w-[300px] xl:h-[150px] text-semibold">
+        <h4 class="text-white-300 text-2xl xl:text-3xl">GAS LEVEL</h4>
+        <h5 id="recent-gas-level" class="text-white-100 font-bold text-3xl xl:text-5xl"> Waiting...
+        </h5>
+      </div>
+
+
+
+    </div>
+  </section>
+  <h4 class="font-semibold text-lg text-amber-500 mt-20 mb-3 self-start"> Data collected in the last 50 seconds
+  </h4>
+  <div class="overflow-x-auto w-full border border-gray-500 rounded-lg p-2">
+    <table id="messagesTable" class="table table-xs md:table-md lg:table-lg xl:table-2xl table-pin-cols table-auto ">
+      <thead class="font-semibold text-white-200 text-lg text-white-100">
+        <tr>
+          <td>Time</td>
+          <td>Room Temperature</td>
+          <td>Gas Level</td>
+        </tr>
+      </thead>
+      {% for i in data %}
+      <tr>
+        <td>{{ i['created_at'] }}</td>
+        <td>{{ i['temperature'] }} &deg;C.</td>
+        <td>{{ "DANGEROUS" if i['gas_is_detected'] else "NORMAL" }}</td>
+      </tr>
+      {% endfor %}
+
+    </table>
+  </div>
+</section>
+
+
+<script>
+  document.getElementById('floor-filter').addEventListener('change', function (event) {
+    // Prevent the default form submission
+    event.preventDefault();
+
+    // Get the form data
+    var formData = new FormData(this);
+
+    // Construct the URL parameters
+    var params = new URLSearchParams(formData).toString();
+
+    // Get the current URL and append the parameters
+    var currentUrl = window.location.href.split('?')[0]; // Get the current URL without existing parameters
+    var url = currentUrl + '?' + params;
+
+    // Set the window location to the constructed URL
+    window.location.href = url;
+  });
+</script>
+
+<!-- Include necessary SocketIO and JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.js"></script>
+<script>
+  var socket = io();
+
+  socket.on("mqtt_message", function (msg) {
+    console.log(msg);
+
+    // Get the table body
+    const messagesTableBody = document.querySelector(
+      "#messagesTable tbody"
+    );
+    floor = window.location.search;
+
+    if (floor == "") {
+      floor = 0;
+    } else if (floor.split("=").length > 1) {
+      floor = parseInt(floor.split("=")[1]) - 1;
+    }
+
+    msg = msg.payload[floor];
+
+    current_lamp = document.getElementById('recent-temperature')
+    current_fan = document.getElementById('recent-gas-level')
+
+    old_lamp_state = current_lamp.innerText
+    old_fan_state = current_fan.innerText
+
+    current_lamp.innerText = msg.temperature + '\u00B0C';
+    current_fan.innerText = msg.gas_is_detected ? "DANGEROUS" : "NORMAL";
+
+    current_lamp.className = msg.temperature < 40 ? "text-emerald-500 font-bold text-5xl" : "text-red-400 font-bold text-5xl"
+    current_fan.className = msg.gas_is_detected ? "text-red-400 font-bold text-5xl" : "text-emerald-500 font-bold text-5xl"
+
+    if (!old_lamp_state.includes("Waiting") && !old_fan_state.includes("Waiting")) {
+      const newRow = messagesTableBody.insertRow(0);
+      const cell1 = newRow.insertCell(0);
+      const cell2 = newRow.insertCell(1);
+      const cell3 = newRow.insertCell(2);
+
+      const timestamp = new Date(msg.created_at);
+      cell1.textContent = timestamp.toLocaleString();
+      cell2.textContent = old_lamp_state
+      cell3.textContent = old_fan_state
+
+      // // Check if there are more than 10 rows and remove the most bottom row
+      if (messagesTableBody.rows.length > 10) {
+        messagesTableBody.deleteRow(-1);
+      }
+    }
+
+  });
+
+  function publishMessage() {
+    var topic = document.getElementById("publishTopic").value;
+    var message = document.getElementById("publishMessage").value;
+    socket.emit(
+      "publish",
+      JSON.stringify({ topic: topic, message: message })
+    );
+  }
+
+  function subscribeTopic() {
+    var topic = document.getElementById("subscribeTopic").value;
+    socket.emit("subscribe", JSON.stringify({ topic: topic }));
+  }
+
+  function unsubscribeAll() {
+    socket.emit("unsubscribe_all");
+    document.getElementById("messagesList").innerHTML = ""; // Clear the messages list
+  }
+</script>
+{% endblock content%}

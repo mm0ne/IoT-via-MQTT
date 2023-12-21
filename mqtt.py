@@ -27,6 +27,11 @@ socketio = SocketIO(app)
 
 @app.route("/", methods=["GET"])
 def index():
+    return render_template("index.html")
+
+
+@app.route("/mobilan", methods=["GET"])
+def mobilan():
     mqtt.unsubscribe_all()
     mqtt.subscribe("mobilan")
 
@@ -34,7 +39,19 @@ def index():
     if not floor.isnumeric():
         floor = 1
     response = db.table("mobilan").select("*").filter("floor", "eq", str(floor)).limit(10).execute()
-    return render_template("./index.html", data=response.data)
+    return render_template("mobilan.html", data=response.data)
+
+
+@app.route("/pintu-surga", methods=["GET"])
+def pintu_surga():
+    mqtt.unsubscribe_all()
+    mqtt.subscribe("pintu-surga")
+
+    floor: str = request.args.get("floor", "")
+    if not floor.isnumeric():
+        floor = 1
+    response = db.table("pintu_surga").select("*").filter("floor", "eq", str(floor)).limit(10).execute()
+    return render_template("./pintu-surga.html", data=response.data)
 
 
 @socketio.on("publish")
@@ -56,7 +73,6 @@ def handle_unsubscribe_all():
 
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
-
     data = db_insert(message=message)
     socketio.emit("mqtt_message", data=data)
 
@@ -68,18 +84,23 @@ def handle_logging(client, userdata, level, buf):
 
 def parse_mqtt_data(message: Optional[bytes]) -> Sequence[dict]:
     payload = message.payload.decode().split("|")
-    data = [i.split(",") for i in payload if i != '']
+    data = [i.split(",") for i in payload if i != ""]
     topic = message.topic
 
     if topic == "mobilan":
         data = [{"floor": j + 1, "lamp_is_on": i[0] == "1", "fan_is_on": i[1] == "1"} for j, i in enumerate(data)]
 
+    elif topic == "pintu-surga":
+        data = [
+            {"floor": j + 1, "temperature": round(float(i[0]), 1), "gas_is_detected": i[1] == "1"}
+            for j, i in enumerate(data)
+        ]
     return data
 
 
 def db_insert(message: Optional[bytes]) -> dict:
     data = parse_mqtt_data(message=message)
-    response = db.table("mobilan").insert(data).execute()
+    response = db.table(message.topic).insert(data).execute()
     return dict(topic=message.topic, payload=response.data)
 
 
