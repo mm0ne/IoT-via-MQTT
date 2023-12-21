@@ -32,7 +32,6 @@ def index():
 
 @app.route("/mobilan", methods=["GET"])
 def mobilan():
-    mqtt.unsubscribe_all()
     mqtt.subscribe("mobilan")
 
     floor: str = request.args.get("floor", "")
@@ -44,13 +43,12 @@ def mobilan():
 
 @app.route("/pintu-surga", methods=["GET"])
 def pintu_surga():
-    mqtt.unsubscribe_all()
     mqtt.subscribe("pintu-surga")
 
     floor: str = request.args.get("floor", "")
     if not floor.isnumeric():
         floor = 1
-    response = db.table("pintu_surga").select("*").filter("floor", "eq", str(floor)).limit(10).execute()
+    response = db.table("pintu-surga").select("*").filter("floor", "eq", str(floor)).limit(10).execute()
     return render_template("./pintu-surga.html", data=response.data)
 
 
@@ -74,7 +72,7 @@ def handle_unsubscribe_all():
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
     data = db_insert(message=message)
-    socketio.emit("mqtt_message", data=data)
+    socketio.emit(message.topic, data=data)
 
 
 @mqtt.on_log()
