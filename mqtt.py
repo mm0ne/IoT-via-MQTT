@@ -37,7 +37,14 @@ def mobilan():
     floor: str = request.args.get("floor", "")
     if not floor.isnumeric():
         floor = 1
-    response = db.table("mobilan").select("*").filter("floor", "eq", str(floor)).limit(10).execute()
+    response = (
+        db.table("mobilan")
+        .select("*")
+        .filter("floor", "eq", str(floor))
+        .order(column="created_at", desc=True)
+        .limit(10)
+        .execute()
+    )
     return render_template("mobilan.html", data=response.data)
 
 
@@ -48,7 +55,14 @@ def pintu_surga():
     floor: str = request.args.get("floor", "")
     if not floor.isnumeric():
         floor = 1
-    response = db.table("pintu-surga").select("*").filter("floor", "eq", str(floor)).limit(10).execute()
+    response = (
+        db.table("pintu-surga")
+        .select("*")
+        .filter("floor", "eq", str(floor))
+        .order(column="created_at", desc=True)
+        .limit(10)
+        .execute()
+    )
     return render_template("./pintu-surga.html", data=response.data)
 
 
