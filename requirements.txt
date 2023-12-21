@@ -1,5 +1,5 @@
-Flask==2.3.3
+Flask
 Flask-Cors==4.0.0
 Flask-MQTT==1.1.1
 Flask-SocketIO==5.3.6
-supabase==1.0.4
+supabase
