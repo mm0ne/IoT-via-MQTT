@@ -12,12 +12,9 @@ eventlet.monkey_patch()
 db: Client = create_instance()
 
 app = Flask(__name__, template_folder="./templates")
-app.config["SECRET"] = "my secret key"
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.config["MQTT_BROKER_URL"] = "192.168.237.94"
 app.config["MQTT_BROKER_PORT"] = 1883
-app.config["MQTT_USERNAME"] = ""
-app.config["MQTT_PASSWORD"] = ""
 app.config["MQTT_KEEPALIVE"] = 60
 app.config["MQTT_TLS_ENABLED"] = False
 
@@ -100,11 +97,18 @@ def parse_mqtt_data(message: Optional[bytes]) -> Sequence[dict]:
     topic = message.topic
 
     if topic == "mobilan":
-        data = [{"floor": j + 1, "lamp_is_on": i[0] == "1", "fan_is_on": i[1] == "1"} for j, i in enumerate(data)]
+        data = [
+            {"floor": j + 1, "lamp_is_on": i[0] == "1", "fan_is_on": i[1] == "1"}
+            for j, i in enumerate(data)
+        ]
 
     elif topic == "pintu-surga":
         data = [
-            {"floor": j + 1, "temperature": round(float(i[0]), 1), "gas_is_detected": i[1] == "1"}
+            {
+                "floor": j + 1,
+                "temperature": round(float(i[0]), 1),
+                "gas_is_detected": i[1] == "1",
+            }
             for j, i in enumerate(data)
         ]
     return data
